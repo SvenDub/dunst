@@ -52,7 +52,7 @@ void draw_setup(void)
         pango_fdesc = pango_font_description_from_string(settings.font);
 }
 
-static color_t x_color_hex_to_double(int hexValue)
+static color_t color_hex_to_double(int hexValue)
 {
         color_t color;
         color.r = ((hexValue >> 16) & 0xFF) / 255.0;
@@ -62,7 +62,7 @@ static color_t x_color_hex_to_double(int hexValue)
         return color;
 }
 
-static color_t x_string_to_color_t(const char *str)
+static color_t string_to_color(const char *str)
 {
         char *end;
         long int val = strtol(str+1, &end, 16);
@@ -70,10 +70,10 @@ static color_t x_string_to_color_t(const char *str)
                 LOG_W("Invalid color string: '%s'", str);
         }
 
-        return x_color_hex_to_double(val);
+        return color_hex_to_double(val);
 }
 
-static double _apply_delta(double base, double delta)
+static double apply_delta(double base, double delta)
 {
         base += delta;
         if (base > 1)
@@ -94,14 +94,14 @@ static color_t calculate_foreground_color(color_t bg)
 
         int signedness = darken ? -1 : 1;
 
-        color.r = _apply_delta(color.r, c_delta * signedness);
-        color.g = _apply_delta(color.g, c_delta * signedness);
-        color.b = _apply_delta(color.b, c_delta * signedness);
+        color.r = apply_delta(color.r, c_delta * signedness);
+        color.g = apply_delta(color.g, c_delta * signedness);
+        color.b = apply_delta(color.b, c_delta * signedness);
 
         return color;
 }
 
-static color_t x_get_separator_color(colored_layout *cl, colored_layout *cl_next)
+static color_t get_separator_color(colored_layout *cl, colored_layout *cl_next)
 {
         switch (settings.sep_color) {
         case FRAME:
@@ -110,7 +110,7 @@ static color_t x_get_separator_color(colored_layout *cl, colored_layout *cl_next
                 else
                         return cl->frame;
         case CUSTOM:
-                return x_string_to_color_t(settings.sep_custom_color_str);
+                return string_to_color(settings.sep_custom_color_str);
         case FOREGROUND:
                 return cl->fg;
         case AUTO:
@@ -120,7 +120,7 @@ static color_t x_get_separator_color(colored_layout *cl, colored_layout *cl_next
         }
 }
 
-static void r_setup_pango_layout(PangoLayout *layout, int width)
+static void setup_pango_layout(PangoLayout *layout, int width)
 {
         pango_layout_set_wrap(layout, PANGO_WRAP_WORD_CHAR);
         pango_layout_set_width(layout, width * PANGO_SCALE);
@@ -215,7 +215,7 @@ static struct dimension calculate_dimensions(GSList *layouts)
                         w -= 2 * settings.h_padding;
                         w -= 2 * settings.frame_width;
                         if (cl->icon) w -= cairo_image_surface_get_width(cl->icon) + settings.h_padding;
-                        r_setup_pango_layout(cl->l, w);
+                        setup_pango_layout(cl->l, w);
 
                         /* re-read information */
                         pango_layout_get_pixel_size(cl->l, &w, &h);
@@ -251,7 +251,7 @@ static PangoLayout *create_layout(cairo_t *c)
         return layout;
 }
 
-static colored_layout *r_init_shared(cairo_t *c, notification *n)
+static colored_layout *init_shared(cairo_t *c, notification *n)
 {
         colored_layout *cl = g_malloc(sizeof(colored_layout));
         cl->l = create_layout(c);
@@ -315,9 +315,9 @@ static colored_layout *r_init_shared(cairo_t *c, notification *n)
                 cl->icon = NULL;
         }
 
-        cl->fg = x_string_to_color_t(n->colors[ColFG]);
-        cl->bg = x_string_to_color_t(n->colors[ColBG]);
-        cl->frame = x_string_to_color_t(n->colors[ColFrame]);
+        cl->fg = string_to_color(n->colors[ColFG]);
+        cl->bg = string_to_color(n->colors[ColBG]);
+        cl->frame = string_to_color(n->colors[ColFrame]);
 
         cl->n = n;
 
@@ -325,30 +325,30 @@ static colored_layout *r_init_shared(cairo_t *c, notification *n)
         int width = dim.w;
 
         if (have_dynamic_width()) {
-                r_setup_pango_layout(cl->l, -1);
+                setup_pango_layout(cl->l, -1);
         } else {
                 width -= 2 * settings.h_padding;
                 width -= 2 * settings.frame_width;
                 if (cl->icon) width -= cairo_image_surface_get_width(cl->icon) + settings.h_padding;
-                r_setup_pango_layout(cl->l, width);
+                setup_pango_layout(cl->l, width);
         }
 
         return cl;
 }
 
-static colored_layout *r_create_layout_for_xmore(cairo_t *c, notification *n, int qlen)
+static colored_layout *create_layout_for_xmore(cairo_t *c, notification *n, int qlen)
 {
-        colored_layout *cl = r_init_shared(c, n);
+        colored_layout *cl = init_shared(c, n);
         cl->text = g_strdup_printf("(%d more)", qlen);
         cl->attr = NULL;
         pango_layout_set_text(cl->l, cl->text, -1);
         return cl;
 }
 
-static colored_layout *r_create_layout_from_notification(cairo_t *c, notification *n)
+static colored_layout *create_layout_from_notification(cairo_t *c, notification *n)
 {
 
-        colored_layout *cl = r_init_shared(c, n);
+        colored_layout *cl = init_shared(c, n);
 
         /* markup */
         GError *err = NULL;
@@ -378,7 +378,7 @@ static colored_layout *r_create_layout_from_notification(cairo_t *c, notificatio
         return cl;
 }
 
-static GSList *r_create_layouts(cairo_t *c)
+static GSList *create_layouts(cairo_t *c)
 {
         GSList *layouts = NULL;
 
@@ -400,24 +400,24 @@ static GSList *r_create_layouts(cairo_t *c)
                         n->text_to_render = new_ttr;
                 }
                 layouts = g_slist_append(layouts,
-                                r_create_layout_from_notification(c, n));
+                                create_layout_from_notification(c, n));
         }
 
         if (xmore_is_needed && settings.geometry.h != 1) {
                 /* append xmore message as new message */
                 layouts = g_slist_append(layouts,
-                        r_create_layout_for_xmore(c, last, qlen));
+                        create_layout_for_xmore(c, last, qlen));
         }
 
         return layouts;
 }
 
-static void r_free_layouts(GSList *layouts)
+static void free_layouts(GSList *layouts)
 {
         g_slist_free_full(layouts, free_colored_layout);
 }
 
-static struct dimension x_render_layout(cairo_t *c, colored_layout *cl, colored_layout *cl_next, struct dimension dim, bool first, bool last)
+static struct dimension render_layout(cairo_t *c, colored_layout *cl, colored_layout *cl_next, struct dimension dim, bool first, bool last)
 {
         int h;
         int h_text = 0;
@@ -481,7 +481,7 @@ static struct dimension x_render_layout(cairo_t *c, colored_layout *cl, colored_
                 dim.y += (int)(floor(bg_half_height) + pango_offset);
 
         if (settings.separator_height > 0 && !last) {
-                color_t sep_color = x_get_separator_color(cl, cl_next);
+                color_t sep_color = get_separator_color(cl, cl_next);
                 cairo_set_source_rgb(c, sep_color.r, sep_color.g, sep_color.b);
 
                 if (settings.sep_color == FRAME)
@@ -519,7 +519,7 @@ static struct dimension x_render_layout(cairo_t *c, colored_layout *cl, colored_
 void draw(void)
 {
 
-        GSList *layouts = r_create_layouts(c_context);
+        GSList *layouts = create_layouts(c_context);
 
         struct dimension dim = calculate_dimensions(layouts);
         int width = dim.w;
@@ -537,9 +537,9 @@ void draw(void)
         bool first = true;
         for (GSList *iter = layouts; iter; iter = iter->next) {
                 if (iter->next)
-                        dim = x_render_layout(c, iter->data, iter->next->data, dim, first, iter->next == NULL);
+                        dim = render_layout(c, iter->data, iter->next->data, dim, first, iter->next == NULL);
                 else
-                        dim = x_render_layout(c, iter->data, NULL, dim, first, iter->next == NULL);
+                        dim = render_layout(c, iter->data, NULL, dim, first, iter->next == NULL);
 
                 first = false;
         }
@@ -552,7 +552,7 @@ void draw(void)
 
         cairo_destroy(c);
         cairo_surface_destroy(image_surface);
-        r_free_layouts(layouts);
+        free_layouts(layouts);
 }
 
 void draw_free(void)
