@@ -55,12 +55,7 @@ void x_win_move(int width, int height)
 {
         // Previous dimensions of the window to avoid calling X11 if no change
         // is needed
-        static struct {
-                int x;
-                int y;
-                int w;
-                int h;
-        } window_dim = { 0 };
+        static struct dimensions window_dim = { 0 };
 
         int x, y;
         screen_info *scr = get_active_screen();

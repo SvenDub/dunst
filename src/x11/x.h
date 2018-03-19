@@ -26,6 +26,13 @@ typedef struct _keyboard_shortcut {
 // Cyclical dependency
 #include "src/settings.h"
 
+struct dimensions {
+        int x;
+        int y;
+        int w;
+        int h;
+};
+
 typedef struct _xctx {
         Atom utf8;
         Display *dpy;

@@ -31,13 +31,6 @@ typedef struct {
         notification *n;
 } colored_layout;
 
-struct dimension {
-        int x;
-        int y;
-        int w;
-        int h;
-};
-
 cairo_surface_t *root_surface;
 cairo_t *c_context;
 
@@ -159,9 +152,9 @@ static bool have_dynamic_width(void)
         return (settings.geometry.width_set && settings.geometry.w == 0);
 }
 
-static struct dimension calculate_dimensions(GSList *layouts)
+static struct dimensions calculate_dimensions(GSList *layouts)
 {
-        struct dimension dim = { 0 };
+        struct dimensions dim = { 0 };
 
         screen_info *scr = get_active_screen();
         if (have_dynamic_width()) {
@@ -321,7 +314,7 @@ static colored_layout *init_shared(cairo_t *c, notification *n)
 
         cl->n = n;
 
-        struct dimension dim = calculate_dimensions(NULL);
+        struct dimensions dim = calculate_dimensions(NULL);
         int width = dim.w;
 
         if (have_dynamic_width()) {
@@ -417,7 +410,7 @@ static void free_layouts(GSList *layouts)
         g_slist_free_full(layouts, free_colored_layout);
 }
 
-static struct dimension render_layout(cairo_t *c, colored_layout *cl, colored_layout *cl_next, struct dimension dim, bool first, bool last)
+static struct dimensions render_layout(cairo_t *c, colored_layout *cl, colored_layout *cl_next, struct dimensions dim, bool first, bool last)
 {
         int h;
         int h_text = 0;
@@ -521,7 +514,7 @@ void draw(void)
 
         GSList *layouts = create_layouts(c_context);
 
-        struct dimension dim = calculate_dimensions(layouts);
+        struct dimensions dim = calculate_dimensions(layouts);
         int width = dim.w;
         int height = dim.h;
 
